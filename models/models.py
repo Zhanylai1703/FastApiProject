@@ -1,13 +1,26 @@
 from core.db import Base
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey, Float, Enum, Boolean
+from sqlalchemy import (
+    Column, String, Integer, Text,
+    DateTime, ForeignKey, Float,
+    Boolean, Table, Sequence)
 from sqlalchemy.sql.sqltypes import Enum
-from sqlalchemy.ext.declarative import declarative_base
+
+
+post_hashtag_association = Table(
+    'post_hashtag_association',
+    Base.metadata,
+    Column('post_id', Integer, ForeignKey('microblog_posts.id')),
+    Column('hashtag_id', Integer, ForeignKey('hashtags.id'))
+)
 
 
 class City(Base):
     __tablename__ = 'cities'
-    id = Column(Integer, primary_key=True, unique=True, index=True)
+    id = Column(
+        Integer, Sequence('cities_id_seq'), primary_key=True, unique=True,
+        index=True, autoincrement=True, server_default=Sequence('cities_id_seq').next_value()
+    )
     name = Column(String)
 
 
@@ -25,7 +38,9 @@ class GenderType(Enum):
 class User(Base):
     __tablename__ = 'user'
 
-    id = Column(Integer, primary_key=True, index=True, unique=True)
+    id = Column(
+        Integer, primary_key=True, index=True, unique=True,
+    )
     name = Column(String, unique=True)
     password = Column(String)
     email = Column(String, unique=True, index=True)
@@ -36,6 +51,7 @@ class User(Base):
     gender = Column(Enum(GenderType.F, GenderType.M, GenderType.O, name='gendertype'), default=GenderType.O)
     is_active = Column(Boolean, default=False)
     is_admin = Column(Boolean, default=False)
+    phone = Column(String(length=12))
 
 
 class Category(Base):
@@ -57,7 +73,9 @@ class Post(Base):
     category = relationship('Category')
     image = Column(String)
     hashtags = relationship(
-        "Hashtag", secondary='post_hashtags', back_populates='posts'
+        'Hashtag',
+        secondary=post_hashtag_association,
+        backref='posts'
     )
 
 
@@ -65,6 +83,14 @@ class Hashtag(Base):
     __tablename__ = 'hashtags'
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name = Column(String(length=25))
-    posts = relationship(
-        "Post", secondary='post_hashtags', back_populates='hashtags'
+
+
+class Comment(Base):
+    __tablename__ = 'comments'
+    id = Column(
+        Integer, primary_key=True, unique=True,
+        index=True, autoincrement=True
     )
+    author = relationship('User')
+    author_id = Column(Integer, ForeignKey('user.id'))
+    text = Column(Text)
